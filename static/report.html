@@ -1,0 +1,57 @@
+<html ng-app="n8Admin">
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.17/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.17/angular-animate.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.17/angular-aria.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <script>
+    var n8Admin = angular.module("n8Admin", []);
+    n8Admin.controller('n8AdminCtrl', ['$scope', '$http', function($scope, $http) {
+      $scope.start = new Date();
+      $scope.start.setSeconds(0);
+      $scope.start.setMilliseconds(0);
+      $scope.end = new Date();
+      $scope.end.setSeconds(0);
+      $scope.end.setMilliseconds(0);
+      $scope.queue = [];
+      $scope.refresh = function () {
+        $http.get(
+            '/api/drink_report',
+            {'params': {'start': $scope.start.toISOString(),
+                        'end': $scope.end.toISOString()}}).
+        success(function(data) {
+          console.log("refresh", data);
+          $scope.queue = data;
+        });
+      }
+
+      $scope.refresh();
+    }]);
+  </script>
+<body ng-controller="n8AdminCtrl" ng-submit="refresh()">
+  <form name="dateRange">Choose the time range for finished drinks
+  <label for="start">Start</label>
+  <input type="datetime-local" id="start" name="start" ng-model="start"
+         placeholder="2016-06-27T19:00:00Z" required>
+  <br>
+  <label for="end">End</label>
+  <input type="datetime-local" id="end" name="end" ng-model="end"
+         placeholder="2017-01-01T00:00:00Z" required>
+  <button type="submit">Refresh</button>
+  </form>
+  <ul>
+    <li ng-repeat="order in queue">
+      <h4>{{order.drink_name}} for {{order.user_name}}</h4>
+      <ul>
+        <li>Rating: {{order.rating}}</li>
+        <li ng-repeat="i in order.ingredients">
+          {{i.parts || i.drops}}
+          {{i.parts ? "parts" : "drops"}}
+          {{i.name}}
+        </li>
+      </ul>
+    </li>
+  </ul>
+</body>
+</html>
