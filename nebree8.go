@@ -88,6 +88,10 @@ func unpreparedDrinkQueryNewestFirst() *datastore.Query {
 	return datastore.NewQuery(orderEntityType).Filter("DoneTime =", time.Time{}).Order("OrderTime")
 }
 
+func finishedDrinkQuery(start, end time.Time) *datastore.Query {
+	return datastore.NewQuery(orderEntityType).Filter("DoneTime >", start).Filter("DoneTime <", end).Order("DoneTime")
+}
+
 func returnItems(c appengine.Context, q *datastore.Query, w http.ResponseWriter) {
 	var orders []Order
 	type Item struct {
@@ -113,6 +117,7 @@ func init() {
 	http.HandleFunc("/api/order_status", orderStatus)
 	http.HandleFunc("/api/order_rate", orderRate)
 	http.HandleFunc("/api/drink_queue", drinkQueue)
+	http.HandleFunc("/api/drink_report", drinkReport)
 	// Internal.
 	http.HandleFunc("/api/next_drink", nextDrink)
 	http.HandleFunc("/api/finished_drink", finishedDrink)
@@ -185,7 +190,23 @@ func nextDrink(w http.ResponseWriter, r *http.Request) {
 }
 
 func drinkQueue(w http.ResponseWriter, r *http.Request) {
-	returnItems(appengine.NewContext(r), unpreparedDrinkQueryNewestFirst(), w)
+	c := appengine.NewContext(r)
+
+	returnItems(c, unpreparedDrinkQueryNewestFirst(), w)
+}
+
+func drinkReport(w http.ResponseWriter, r *http.Request) {
+	start, err := time.Parse(time.RFC3339, r.FormValue("start"))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid start=\"%v\"", r.FormValue("start")), http.StatusBadRequest)
+		return
+	}
+	end, err := time.Parse(time.RFC3339, r.FormValue("end"))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid end=\"%v\"", r.FormValue("end")), http.StatusBadRequest)
+		return
+	}
+	returnItems(appengine.NewContext(r), finishedDrinkQuery(start, end), w)
 }
 
 func finishedDrink(w http.ResponseWriter, r *http.Request) {
